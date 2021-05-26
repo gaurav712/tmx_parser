@@ -1,6 +1,6 @@
 CC = gcc
 CCFLAGS= -g3
-LDFLAGS = -lSDL2
+LDFLAGS = -lpng
 
 all: test
 
