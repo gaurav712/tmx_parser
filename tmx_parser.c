@@ -83,11 +83,38 @@ void get_tilemapspecs(
 
 static void fill_in_tileset_info(struct Tileset *tileset) {
 
+    /* To make the following assignments cleaner */
     struct Tileset *struct_with_offset = (struct Tileset *)(tileset + (tileset_count - 1));
-    
-    struct_with_offset->columns = 15;
-    struct_with_offset->firstgid = 5;
-    struct_with_offset->tilecount = 10;
+
+    /* Get the firstgid */
+    fscanf(src, "%s", temp_word);
+    get_attr_val(temp_word, temp_word);
+    struct_with_offset->firstgid = atoi(temp_word);
+
+    /* tile_width */
+    read_until("tilewidth");
+    get_attr_val(temp_word, temp_word);
+    struct_with_offset->tile_width = atoi(temp_word);
+
+    /* tile_height */
+    fscanf(src, "%s", temp_word);
+    get_attr_val(temp_word, temp_word);
+    struct_with_offset->tile_height = atoi(temp_word);
+
+    /* tilecount */
+    fscanf(src, "%s", temp_word);
+    get_attr_val(temp_word, temp_word);
+    struct_with_offset->tilecount = atoi(temp_word);
+
+    /* columns */
+    fscanf(src, "%s", temp_word);
+    get_attr_val(temp_word, temp_word);
+    struct_with_offset->columns = atoi(temp_word);
+
+    /* Image source path */
+    read_until("source=");
+    get_attr_val(temp_word, temp_word);
+    strncpy(struct_with_offset->source_img_path, temp_word, strlen(temp_word));
 }
 
 void load_tilesets(struct Tileset **tileset) {

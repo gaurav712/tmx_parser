@@ -4,10 +4,10 @@
 
 struct Tileset {
     unsigned short firstgid;
-    unsigned short tilecount;
-    unsigned short columns;
     unsigned short tile_width;
     unsigned short tile_height;
+    unsigned short tilecount;
+    unsigned short columns;
 
     char source_img_path[MAX_PATH_LEN];
 };
