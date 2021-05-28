@@ -9,6 +9,7 @@
 
 FILE *src;
 char temp_word[MAXWORDLEN];
+char rel_path[MAX_PATH_LEN];    /* Relative path to the Tilemap file */
 unsigned short tileset_count = 0;
 
 /* Pixel array for the tileset image */
@@ -53,9 +54,17 @@ static void read_until(const char *terminal_key) {
 
 /* Load the source file with tilemap */
 void load_tilemap(const char *source_file) {
+
+    short index;
+
     if((src = fopen(source_file, "r")) == NULL) {
         die_with_error("failed to load source file!");
     }
+
+    /* Fill in the relative path(excluding the filename) */
+    for(index = (strlen(source_file) - 1); source_file[index] != '/' && source_file[index] != '\\'; index--);
+
+    strncpy(rel_path, source_file, index + 1);
 }
 
 /* Get the tilemap specs */
@@ -118,7 +127,10 @@ static void fill_in_tileset_info(struct Tileset *tileset) {
     /* Image source path */
     read_until("source=");
     get_attr_val(temp_word, temp_word);
-    strncpy(struct_with_offset->source_img_path, temp_word, strlen(temp_word));
+
+    /* Make the path relative to the tilemap */
+    strcpy(struct_with_offset->source_img_path, rel_path);
+    strcat(struct_with_offset->source_img_path, temp_word);
 }
 
 static void load_tileset_image(const char *image_path) {
@@ -173,7 +185,7 @@ void load_tilesets(struct Tileset **tileset) {
         }
     }
 
-    load_tileset_image("/home/gaurav/Projects/SDL_Game/res/tilemaps/city_outline.png");
+    // load_tileset_image("/home/gaurav/Projects/SDL_Game/res/tilemaps/city_outline.png");
 }
 
 void destroy_tilemap(struct Tileset *tileset) {
