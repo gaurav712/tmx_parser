@@ -19,9 +19,15 @@ int main(void) {
 
     load_tilesets(&tileset);
 
-    printf("%hd %hd %hd %hd %hd %s\n",
-        tileset->firstgid, tileset->tile_width, tileset->tile_height, tileset->tilecount, tileset->columns,
-        tileset->source_img_path);
+    for(short i = 0; i < tileset_count; i++) {
+        printf("%hd %hd %hd %hd %hd %s\n",
+            (tileset + i)->firstgid,
+            (tileset + i)->tile_width,
+            (tileset + i)->tile_height,
+            (tileset + i)->tilecount,
+            (tileset + i)->columns,
+            (tileset + i)->source_img_path);
+    }
 
     destroy_tilemap(tileset);
     return 0;

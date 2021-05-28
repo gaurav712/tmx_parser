@@ -10,6 +10,7 @@
 FILE *src;
 char temp_word[MAXWORDLEN];
 char rel_path[MAX_PATH_LEN];    /* Relative path to the Tilemap file */
+
 unsigned short tileset_count = 0;
 
 /* Pixel array for the tileset image */
@@ -160,8 +161,6 @@ static void load_tileset_image(const char *image_path) {
 }
 
 void load_tilesets(struct Tileset **tileset) {
-
-    /* Set the tmp_ptr to the start of *tileset */
 
     while (1) {
         /* Read the next word */

@@ -12,6 +12,8 @@ struct Tileset {
     char source_img_path[MAX_PATH_LEN];
 };
 
+extern unsigned short tileset_count;
+
 void load_tilemap(const char *source_file);
 void get_tilemapspecs(unsigned short *width, unsigned short *height, unsigned short *tile_width, unsigned short *tile_height);
 void load_tilesets(struct Tileset **tileset);
