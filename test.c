@@ -2,7 +2,7 @@
 
 #include "tmx_parser.h"
 
-#define WINDOW_WIDTH    800
+#define WINDOW_WIDTH    820
 #define WINDOW_HEIGHT   600
 
 int main(int argc, char *argv[]) {
@@ -62,6 +62,10 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
     int close = 0;
 
+    /* Test the tectures */
+    SDL_Rect dest_rect = {0, 0, 32, 32};
+    SDL_Rect src_rect = {0, 0, 32, 32};
+
     while(!close) {
         while( SDL_PollEvent( &event ) != 0 ) {
             //User requests quit
@@ -70,6 +74,15 @@ int main(int argc, char *argv[]) {
                 close = 1;
             }
         }
+        for(short row = 0; row < WINDOW_HEIGHT; row+=32) {
+            dest_rect.y = row;
+            for(short col = 0; col < WINDOW_WIDTH; col+=32) {
+                dest_rect.x = col;
+                SDL_RenderCopy(renderer, tileset_textures[0], &src_rect, &dest_rect);
+            }
+        }
+
+        SDL_RenderPresent(renderer);
     }
 
     destroy_tilemap(tileset);
