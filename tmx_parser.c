@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <png.h>
+#include <SDL2/SDL_image.h>
 
 #include "tmx_parser.h"
 
@@ -11,10 +11,11 @@ FILE *src;
 char temp_word[MAXWORDLEN];
 char rel_path[MAX_PATH_LEN];    /* Relative path to the Tilemap file */
 
+/* Number of tilesets in the tilemap */
 unsigned short tileset_count = 0;
 
-/* Pixel array for the tileset image */
-png_bytepp pixel_data;
+/* Textures for the tileset images */
+SDL_Texture **tileset_textures;
 
 static inline void die_with_error(const char *error) {
     fprintf(stderr, error);
@@ -134,32 +135,6 @@ static void fill_in_tileset_info(struct Tileset *tileset) {
     strcat(struct_with_offset->source_img_path, temp_word);
 }
 
-static void load_tileset_image(const char *image_path) {
-
-    int height, width;
-
-    FILE *fp;
-    png_structp png_ptr;
-    png_infop info_ptr;
-
-    /* load the tileset image file */
-    fp = fopen(image_path, "r");
-
-    /* Initialize libpng */
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    info_ptr = png_create_info_struct(png_ptr);
-    png_init_io(png_ptr, fp);
-    
-    /* Load the image */
-    png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
-    pixel_data = png_get_rows(png_ptr, info_ptr);
-
-    width = png_get_image_width(png_ptr, info_ptr);
-    height = png_get_image_height(png_ptr, info_ptr);
-
-    fclose(fp);
-}
-
 void load_tilesets(struct Tileset **tileset) {
 
     while (1) {
@@ -183,11 +158,29 @@ void load_tilesets(struct Tileset **tileset) {
             fill_in_tileset_info(*tileset);
         }
     }
+}
 
-    // load_tileset_image("/home/gaurav/Projects/SDL_Game/res/tilemaps/city_outline.png");
+/* Load images' textures */
+void load_tileset_images(SDL_Renderer *renderer, struct Tileset *tileset) {
+
+    SDL_Surface *temp_surface;
+
+    /* Allocated for the texture pointers */
+    tileset_textures = (SDL_Texture **) malloc(tileset_count * sizeof(SDL_Texture *));
+
+    for(short count = 0; count < tileset_count; count++) {
+        temp_surface = IMG_Load((tileset + count)->source_img_path);
+        tileset_textures[count] = SDL_CreateTextureFromSurface(renderer, temp_surface);
+        SDL_FreeSurface(temp_surface);
+    }
 }
 
 void destroy_tilemap(struct Tileset *tileset) {
     fclose(src);
     free(tileset);
+
+    /* Destroy textures */
+    for(short count = 0; count < tileset_count; count++) {
+        SDL_DestroyTexture(tileset_textures[count]);
+    }
 }
