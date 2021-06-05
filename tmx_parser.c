@@ -11,12 +11,6 @@ FILE *src;
 char temp_word[MAXWORDLEN];
 char rel_path[MAX_PATH_LEN];    /* Relative path to the Tilemap file */
 
-/* Number of tilesets in the tilemap */
-unsigned short tileset_count = 0;
-
-/* Textures for the tileset images */
-SDL_Texture **tileset_textures;
-
 static inline void die_with_error(const char *error) {
     fprintf(stderr, error);
     exit(-1);
@@ -96,46 +90,60 @@ void get_tilemapspecs(
     *tile_height = atoi(temp_word);
 }
 
-static void fill_in_tileset_info(struct Tileset *tileset) {
+/* Load images' textures */
+static inline void load_tileset_texture(SDL_Renderer *renderer, SDL_Texture **texture, const char *source_img_path) {
 
-    /* To make the following assignments cleaner */
-    struct Tileset *struct_with_offset = (struct Tileset *)(tileset + (tileset_count - 1));
+    SDL_Surface *temp_surface;
+
+    temp_surface = IMG_Load(source_img_path);
+    *texture = SDL_CreateTextureFromSurface(renderer, temp_surface);
+    SDL_FreeSurface(temp_surface);
+}
+
+static void fill_in_tileset_info(struct Tileset *tileset, SDL_Renderer *renderer) {
+
+    char temp_str[MAX_PATH_LEN];
 
     /* Get the firstgid */
     fscanf(src, "%s", temp_word);
     get_attr_val(temp_word, temp_word);
-    struct_with_offset->firstgid = atoi(temp_word);
+    tileset->firstgid = atoi(temp_word);
 
     /* tile_width */
     read_until("tilewidth");
     get_attr_val(temp_word, temp_word);
-    struct_with_offset->tile_width = atoi(temp_word);
+    tileset->tile_width = atoi(temp_word);
 
     /* tile_height */
     fscanf(src, "%s", temp_word);
     get_attr_val(temp_word, temp_word);
-    struct_with_offset->tile_height = atoi(temp_word);
+    tileset->tile_height = atoi(temp_word);
 
     /* tilecount */
     fscanf(src, "%s", temp_word);
     get_attr_val(temp_word, temp_word);
-    struct_with_offset->tilecount = atoi(temp_word);
+    tileset->tilecount = atoi(temp_word);
 
     /* columns */
     fscanf(src, "%s", temp_word);
     get_attr_val(temp_word, temp_word);
-    struct_with_offset->columns = atoi(temp_word);
+    tileset->columns = atoi(temp_word);
 
-    /* Image source path */
+    /* Load the texture */
     read_until("source=");
     get_attr_val(temp_word, temp_word);
 
     /* Make the path relative to the tilemap */
-    strcpy(struct_with_offset->source_img_path, rel_path);
-    strcat(struct_with_offset->source_img_path, temp_word);
+    strcpy(temp_str, rel_path);
+    strcat(temp_str, temp_word);
+
+    load_tileset_texture(renderer, &(tileset->src_image_texture), temp_str);
 }
 
-void load_tilesets(struct Tileset **tileset) {
+void load_tilesets(struct Tileset **tileset, SDL_Renderer *renderer) {
+
+    struct Tileset *temp_ptr;
+    Uint8 initialized = 0;
 
     while (1) {
         /* Read the next word */
@@ -149,38 +157,114 @@ void load_tilesets(struct Tileset **tileset) {
         /* If it is an initial <tileset> tag, add it to the Tileset linked list */
         if(!(strncmp(temp_word, "<tileset", 8))) {
 
-            tileset_count++;
-
             /* Allocate for the new entry */
-            *tileset = (struct Tileset *)realloc(*tileset, tileset_count * sizeof(struct Tileset));
+            if(!initialized) {
+                temp_ptr = (struct Tileset *)malloc(sizeof(struct Tileset));
+                *tileset = temp_ptr;
+                initialized = 1;
+            } else {
+                temp_ptr->next = (struct Tileset *)malloc(sizeof(struct Tileset));
+                temp_ptr = temp_ptr->next;
+            }
 
             /* Fill it in */
-            fill_in_tileset_info(*tileset);
+            fill_in_tileset_info(temp_ptr, renderer);
+
+            temp_ptr->next = NULL;
+        }
+    }
+
+    /* Push back the "<layer" tag to the stream for the parsing of layers */
+    for(short i = 5; i >= 0; i--) {
+        ungetc(temp_word[i], src);
+    }
+}
+
+static void fill_in_layer_data(struct Layer *layers) {
+
+    /* Get the width and height of the layer */
+    read_until("width=");
+    get_attr_val(temp_word, temp_word);
+    layers->width = atoi(temp_word);
+
+    fscanf(src, "%s", temp_word);
+    get_attr_val(temp_word, temp_word);
+    layers->height = atoi(temp_word);
+
+    /* Allocate for the rows */
+    layers->layer_data = (unsigned short **) malloc(sizeof(unsigned short *) * layers->height);
+    /* Now for each columns */
+    for(unsigned short count = 0; count < layers->height; count++) {
+        (layers->layer_data)[count] = (unsigned short *) malloc(sizeof(unsigned short) * layers->width);
+    }
+    
+    read_until("encoding=\"csv\">");
+    
+    /* Read the numbers and fill them in */
+    for(unsigned short row = 0; row < layers->height; row++) {
+        for(unsigned short col = 0; col < layers->width; col++) {
+            fscanf(src, "%hd,", &(layers->layer_data)[row][col]);
         }
     }
 }
 
-/* Load images' textures */
-void load_tileset_images(SDL_Renderer *renderer, struct Tileset *tileset) {
+/* Load Layer data */
+void load_layers(struct Layer **layers) {
 
-    SDL_Surface *temp_surface;
+    struct Layer *temp_ptr;
+    Uint8 initialized = 0;
 
-    /* Allocated for the texture pointers */
-    tileset_textures = (SDL_Texture **) malloc(tileset_count * sizeof(SDL_Texture *));
+    while (1) {
+        /* Read the next word */
+        fscanf(src, "%s", temp_word);
 
-    for(short count = 0; count < tileset_count; count++) {
-        temp_surface = IMG_Load((tileset + count)->source_img_path);
-        tileset_textures[count] = SDL_CreateTextureFromSurface(renderer, temp_surface);
-        SDL_FreeSurface(temp_surface);
+        /* If its the end of tilemap, exit the loop */
+        if(!(strncmp(temp_word, "</map>", 6))) {
+            break;
+        }
+
+        /* If it is an initial <layer> tag, add it to the layers linked list */
+        if(!(strncmp(temp_word, "<layer", 6))) {
+
+            /* Allocate for the new entry */
+            if(!initialized) {
+                temp_ptr = (struct Layer *)malloc(sizeof(struct Layer));
+                *layers = temp_ptr;
+                initialized = 1;
+            } else {
+                temp_ptr->next = (struct Layer *)malloc(sizeof(struct Layer));
+                temp_ptr = temp_ptr->next;
+            }
+
+            /* Fill it in */
+            fill_in_layer_data(temp_ptr);
+
+            temp_ptr->next = NULL;
+        }
     }
 }
 
-void destroy_tilemap(struct Tileset *tileset) {
-    fclose(src);
-    free(tileset);
+void destroy_tilemap(struct Tileset *tileset, struct Layer *layers) {
 
-    /* Destroy textures */
-    for(short count = 0; count < tileset_count; count++) {
-        SDL_DestroyTexture(tileset_textures[count]);
+    struct Tileset *tileset_tmp_ptr;
+    struct Layer *layer_tmp_ptr;
+
+    fclose(src);
+
+    while(tileset) {
+        SDL_DestroyTexture(tileset->src_image_texture);
+        tileset_tmp_ptr = tileset->next;
+        free(tileset);
+        tileset = tileset_tmp_ptr;
+    }
+
+    while(layers) {
+        for(unsigned short count = 0; count < layers->height; count++) {
+            free((layers->layer_data)[count]);
+        }
+        free(layers->layer_data);
+        layer_tmp_ptr = layers->next;
+        free(tileset);
+        layers = layer_tmp_ptr;
     }
 }

@@ -2,7 +2,7 @@
 
 #include "tmx_parser.h"
 
-#define WINDOW_WIDTH    820
+#define WINDOW_WIDTH    800
 #define WINDOW_HEIGHT   600
 
 int main(int argc, char *argv[]) {
@@ -13,27 +13,18 @@ int main(int argc, char *argv[]) {
     unsigned short tile_height = 0;
 
     struct Tileset *tileset = NULL;
+    struct Layer *layers = NULL;
 
     SDL_Renderer *renderer;
     SDL_Window *window;
+
+    struct Tileset *temp_ptr;
 
     load_tilemap("/home/gaurav/Projects/SDL_Game/res/tilemaps/TileMap.tmx");
 
     get_tilemapspecs(&map_width, &map_height, &tile_width, &tile_height);
 
     printf("map: %ux%u, tile: %ux%u\n", map_width, map_height, tile_width, tile_height);
-
-    load_tilesets(&tileset);
-
-    for(short i = 0; i < tileset_count; i++) {
-        printf("%hd %hd %hd %hd %hd %s\n",
-            (tileset + i)->firstgid,
-            (tileset + i)->tile_width,
-            (tileset + i)->tile_height,
-            (tileset + i)->tilecount,
-            (tileset + i)->columns,
-            (tileset + i)->source_img_path);
-    }
 
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         fprintf(stderr, "error initializing");
@@ -57,7 +48,26 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    load_tileset_images(renderer, tileset);
+    load_tilesets(&tileset, renderer);
+
+    for(temp_ptr = tileset; temp_ptr; temp_ptr = temp_ptr->next) {
+        printf("%hd %hd %hd %hd %hd\n",
+            temp_ptr->firstgid,
+            temp_ptr->tile_width,
+            temp_ptr->tile_height,
+            temp_ptr->tilecount,
+            temp_ptr->columns);
+    }
+
+    load_layers(&layers);
+
+    /* Print layer data */
+    for(unsigned short row = 0; row < layers->height; row++) {
+        for(unsigned short col = 0; col < layers->width; col++) {
+            printf("%hd ", (layers->layer_data)[row][col]);
+        }
+        printf("\n");
+    }
 
     SDL_Event event;
     int close = 0;
@@ -78,14 +88,14 @@ int main(int argc, char *argv[]) {
             dest_rect.y = row;
             for(short col = 0; col < WINDOW_WIDTH; col+=32) {
                 dest_rect.x = col;
-                SDL_RenderCopy(renderer, tileset_textures[0], &src_rect, &dest_rect);
+                SDL_RenderCopy(renderer, tileset->src_image_texture, &src_rect, &dest_rect);
             }
         }
 
         SDL_RenderPresent(renderer);
     }
 
-    destroy_tilemap(tileset);
+    destroy_tilemap(tileset, layers);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();

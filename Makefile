@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS= -g3
+CCFLAGS= -g3 -Wall
 LDFLAGS = -lSDL2 -lSDL2_image
 
 all: test
