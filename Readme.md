@@ -1,3 +1,5 @@
+> **Note:** This project is moved to Codeberg: https://codeberg.org/gaurav712/tmx_parser
+
 # tmx_parser
 c library to parse `*.tmx` tilemaps exported by [Tiled](https://www.mapeditor.org/)
 
